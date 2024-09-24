@@ -13,10 +13,10 @@ import gregtech.api.unification.material.properties.BlastProperty.GasTier;
 
 public class LabsElements {
 
-    public static final Element Nm = Elements.add(130, 234, -1, null, "Omnium", "Nm", false);
-    public static final Element Dc = Elements.add(149, 264, -1, null, "Draconium", "Dc", false);
-    public static final Element ADc = Elements.add(149, 264, -1, null, "AwakenedDraconium", "Dc*", false);
-    public static final Element Tn = Elements.add(43, 55, -1, null, "Taranium", "Tn", false);
+    public static final Element Nm = add(130, 234, "Omnium", "Nm");
+    public static final Element Dc = add(149, 264, "Draconium", "Dc");
+    public static final Element ADc = add(149, 264, "AwakenedDraconium", "Dc*");
+    public static final Element Tn = add(43, 55, "Taranium", "Tn");
 
     public static void init() {
         Draconium = new Material.Builder(1, makeLabsName("draconium"))
