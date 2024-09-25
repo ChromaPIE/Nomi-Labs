@@ -473,6 +473,7 @@ repositories {
             name 'GTCEu Maven'
             url 'https://maven.gtceu.com'
         }
+        maven { url 'https://jitpack.io' }
     }
     if (usesMixins.toBoolean() || forceEnableMixins.toBoolean()) {
         // need to add this here even if we did not above
@@ -484,14 +485,6 @@ repositories {
         }
     }
     mavenLocal() // Must be last for caching to work
-
-    dependencyResolutionManagement {
-	    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-	    repositories {
-		    mavenCentral()
-		    maven { url 'https://jitpack.io' }
-	    }
-    }
 }
 
 
