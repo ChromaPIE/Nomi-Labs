@@ -17,6 +17,7 @@ public class LabsTOPManager {
     public static void register() {
         ITheOneProbe TOP = TheOneProbe.theOneProbeImp;
         TOP.registerProvider(new TOPTooltipMessage());
+        TOP.registerProvider(new SteamMachineInfoProvider());
         FLUID_NAME_ELEMENT = TOP.registerElementFactory(LabsFluidNameElement::new);
     }
 
@@ -24,7 +25,7 @@ public class LabsTOPManager {
 
         @Override
         public String getID() {
-            return LabsValues.LABS_MODID + "top_tooltips";
+            return LabsValues.LABS_MODID + ":top_tooltips";
         }
 
         @Override
@@ -33,6 +34,7 @@ public class LabsTOPManager {
             Block block = blockState.getBlock();
             if (block instanceof TOPInfoProvider infoProvider) {
                 var msg = infoProvider.getTOPMessage(blockState);
+                if (msg == null) return;
                 for (var text : msg) {
                     probeInfo.text(text);
                 }
