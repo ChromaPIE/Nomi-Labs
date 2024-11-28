@@ -112,6 +112,14 @@ public class LabsConfig {
             public boolean enablePerfectGems = true;
 
             @Config.Comment({
+                    "Enable Custom GT Items.",
+                    "[default: true]"
+            })
+            @Config.LangKey("config.nomilabs.content.gt_content.items")
+            @Config.RequiresMcRestart
+            public boolean enableItems = true;
+
+            @Config.Comment({
                     "Enable Custom GT Blocks.",
                     "In Beta.",
                     "[default: false]"
@@ -433,7 +441,8 @@ public class LabsConfig {
         public int otherModsLinearXp = 0;
 
         @Config.Comment({ "Whether to disable the Narrator.",
-                "Fixes Crashes in Arm Macs, in some very specific environments.",
+                "Fixes crashes in Arm Macs, in some development environments.",
+                "This config does nothing outside of deobfuscated environments!",
                 "If your game is crashing, try enabling this!",
                 "[default: false]" })
         @Config.LangKey("config.nomilabs.advanced.disable_narrator")
