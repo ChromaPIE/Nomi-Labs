@@ -33,12 +33,12 @@ public class DefaultProbeInfoProviderMixin {
             probeInfo.progress(contents, maxContents,
                     probeInfo.defaultProgressStyle()
                             .suffix("mB")
-                            .filledColor(Config.tankbarFilledColor)
-                            .alternateFilledColor(Config.tankbarAlternateFilledColor)
-                            .borderColor(Config.tankbarBorderColor)
-                            .numberFormat(Config.tankFormat));
+                            .filledColor(ConfigSetup.tankbarFilledColor)
+                            .alternateFilledColor(ConfigSetup.tankbarAlternateFilledColor)
+                            .borderColor(ConfigSetup.tankbarBorderColor)
+                            .numberFormat(ConfigSetup.tankFormat));
         } else {
-            probeInfo.text(TextStyleClass.PROGRESS + ElementProgress.format(contents, Config.tankFormat, "mB"));
+            probeInfo.text(TextStyleClass.PROGRESS + ElementProgress.format(contents, ConfigSetup.tankFormat, "mB"));
         }
 
         ci.cancel();
