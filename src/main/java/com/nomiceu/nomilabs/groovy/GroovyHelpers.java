@@ -30,6 +30,7 @@ import com.brandon3055.draconicevolution.lib.RecipeManager;
 import com.cleanroommc.groovyscript.api.GroovyLog;
 import com.cleanroommc.groovyscript.api.IIngredient;
 import com.cleanroommc.groovyscript.compat.mods.ModSupport;
+import com.cleanroommc.groovyscript.helper.GroovyHelper;
 import com.cleanroommc.groovyscript.helper.ingredient.IngredientHelper;
 import com.cleanroommc.groovyscript.helper.recipe.RecipeName;
 import com.cleanroommc.groovyscript.registry.ReloadableRegistryManager;
@@ -192,9 +193,27 @@ public class GroovyHelpers {
             JEIPlugin.addGroovyRecipeOutputTooltip(stack, recipeName, tooltip);
         }
 
+        public static void addRecipeOutputTooltip(ItemStack stack, String recipeName,
+                                                  LabsTranslate.Translatable... tooltip) {
+            if (recipeName.contains(":"))
+                JEIPlugin.addGroovyRecipeOutputTooltip(stack, new ResourceLocation(recipeName), tooltip);
+            else
+                JEIPlugin.addGroovyRecipeOutputTooltip(stack,
+                        new ResourceLocation(GroovyHelper.getPackId(), recipeName), tooltip);
+        }
+
         public static void addRecipeInputTooltip(ResourceLocation recipeName, int slotIndex,
                                                  LabsTranslate.Translatable... tooltip) {
             JEIPlugin.addGroovyRecipeInputTooltip(recipeName, slotIndex, tooltip);
+        }
+
+        public static void addRecipeInputTooltip(String recipeName, int slotIndex,
+                                                 LabsTranslate.Translatable... tooltip) {
+            if (recipeName.contains(":"))
+                JEIPlugin.addGroovyRecipeInputTooltip(new ResourceLocation(recipeName), slotIndex, tooltip);
+            else
+                JEIPlugin.addGroovyRecipeInputTooltip(new ResourceLocation(GroovyHelper.getPackId(), recipeName),
+                        slotIndex, tooltip);
         }
 
         /* Hiding Ignore NBT */
