@@ -136,7 +136,7 @@ config.nomilabs.advanced.difficulty.expert_override=Difficulty Override Expert
 # GUI
 nomilabs.top.steam_heating_up=Heating Up:
 nomilabs.top.steam_cooling_down=Cooling Down
-nomilabs.top.steam_venting_stuck.1=Steam Vent Stuck!
+nomilabs.top.steam_venting_stuck.1=Steam Vent Blocked!
 nomilabs.top.steam_venting_stuck.2=Use a Wrench to Change Vent Direction!
 
 nomilabs.gui.recipes.tooltip.ct_recipe=CraftTweaker Created Recipe
@@ -160,11 +160,13 @@ nomilabs.gui.better_p2p.input=Input
 nomilabs.gui.better_p2p.output=Output
 nomilabs.gui.better_p2p.error.same_output=P2P is already an {}.
 
-nomilabs.gui.advanced_memory_card.mode.add_input=Add as Input
+nomilabs.gui.advanced_memory_card.info.dist=Distance: %sm
+
+gui.advanced_memory_card.mode.add_as_input=Current Mode: Add as Input
 nomilabs.gui.advanced_memory_card.mode.add_input.desc.1=Before binding, the §aselected P2P§7 has its connections removed.
 nomilabs.gui.advanced_memory_card.mode.add_input.desc.2=The §aselected P2P§7 is set as an §9input§7, with the §bbind target's§7 frequency.
 
-nomilabs.gui.advanced_memory_card.mode.add_output=Add as Output
+gui.advanced_memory_card.mode.add_as_output=Current Mode: Add as Output
 nomilabs.gui.advanced_memory_card.mode.add_output.desc.1=Before binding, the §aselected P2P§7 has its connections removed.
 nomilabs.gui.advanced_memory_card.mode.add_output.desc.2=The §aselected P2P§7 is set as an §6output§7, with the §bbind target's§7 frequency.
 
