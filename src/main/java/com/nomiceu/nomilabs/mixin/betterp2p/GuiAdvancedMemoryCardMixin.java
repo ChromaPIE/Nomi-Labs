@@ -2,12 +2,14 @@ package com.nomiceu.nomilabs.mixin.betterp2p;
 
 import net.minecraft.client.gui.GuiScreen;
 
+import org.lwjgl.input.Keyboard;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.nomiceu.nomilabs.integration.betterp2p.AccessibleGuiAdvancedMemoryCard;
@@ -16,6 +18,8 @@ import com.nomiceu.nomilabs.integration.betterp2p.LabsClientCache;
 import com.projecturanus.betterp2p.client.gui.GuiAdvancedMemoryCard;
 import com.projecturanus.betterp2p.client.gui.InfoList;
 import com.projecturanus.betterp2p.client.gui.InfoWrapper;
+import com.projecturanus.betterp2p.client.gui.widget.GuiScale;
+import com.projecturanus.betterp2p.client.gui.widget.WidgetScrollBar;
 import com.projecturanus.betterp2p.client.gui.widget.WidgetTypeSelector;
 import com.projecturanus.betterp2p.item.BetterMemoryCardModes;
 
@@ -23,7 +27,8 @@ import kotlin.Pair;
 
 /**
  * Allows accessing needed functions and fields, and initializes playerPos field in InfoList. Also fills up
- * LabsClientCache.
+ * LabsClientCache, cancels existing checks for invalid setups (moved to infoList, right before sorting),
+ * calls proper resetting of scrollbar in custom places, and allows arrows to scroll.
  */
 @Mixin(value = GuiAdvancedMemoryCard.class, remap = false)
 public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements AccessibleGuiAdvancedMemoryCard {
@@ -44,6 +49,13 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
     @Shadow
     @Final
     private InfoList infos;
+
+    @Shadow
+    @Final
+    private WidgetScrollBar scrollBar;
+
+    @Shadow
+    private GuiScale scale;
 
     @Override
     @Unique
@@ -69,9 +81,69 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
         typeSelector.setVisible(false);
     }
 
-    @Inject(method = "initGui", at = @At("HEAD"))
+    @Inject(method = "initGui", at = @At("HEAD"), remap = true)
     private void setupInfoListPlayerPos(CallbackInfo ci) {
         ((AccessibleInfoList) (Object) infos).labs$setPlayerPos(mc.player.getPositionVector());
+    }
+
+    @Inject(method = "initGui", at = @At("TAIL"), remap = true)
+    private void properlySetScrollbarInit(CallbackInfo ci) {
+        labs$properlyResetScrollbar();
+    }
+
+    @Redirect(method = "initGui",
+              at = @At(value = "INVOKE",
+                       target = "Lcom/projecturanus/betterp2p/client/gui/GuiAdvancedMemoryCard;checkInfo()V",
+                       remap = false),
+              require = 1,
+              remap = true)
+    private void cancelExistingChecksInit(GuiAdvancedMemoryCard instance) {}
+
+    @Redirect(method = "refreshInfo",
+              at = @At(value = "INVOKE",
+                       target = "Lcom/projecturanus/betterp2p/client/gui/GuiAdvancedMemoryCard;checkInfo()V"),
+              require = 1)
+    private void cancelExistingChecksRefresh(GuiAdvancedMemoryCard instance) {}
+
+    @Redirect(method = "updateInfo",
+              at = @At(value = "INVOKE",
+                       target = "Lcom/projecturanus/betterp2p/client/gui/GuiAdvancedMemoryCard;checkInfo()V"),
+              require = 1)
+    private void cancelExistingChecksUpdate(GuiAdvancedMemoryCard instance) {}
+
+    @Inject(method = "mouseClicked",
+            at = @At(value = "INVOKE",
+                     target = "Lcom/projecturanus/betterp2p/client/gui/InfoList;refilter()V",
+                     shift = At.Shift.AFTER,
+                     remap = false),
+            require = 1,
+            remap = true)
+    private void properlyResetScrollbarFilterClear(int mouseX, int mouseY, int mouseButton, CallbackInfo ci) {
+        labs$properlyResetScrollbar();
+    }
+
+    @Inject(method = "keyTyped", at = @At("HEAD"), cancellable = true, remap = true)
+    private void allowArrowScroll(char typedChar, int keyCode, CallbackInfo ci) {
+        if (keyCode == Keyboard.KEY_UP) {
+            scrollBar.wheel(1);
+            ci.cancel();
+            return;
+        }
+        if (keyCode == Keyboard.KEY_DOWN) {
+            scrollBar.wheel(-1);
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "keyTyped",
+            at = @At(value = "INVOKE",
+                     target = "Lcom/projecturanus/betterp2p/client/gui/InfoList;refilter()V",
+                     shift = At.Shift.AFTER,
+                     remap = false),
+            require = 1,
+            remap = true)
+    private void properlyResetScrollbarFilterTyped(char typedChar, int keyCode, CallbackInfo ci) {
+        labs$properlyResetScrollbar();
     }
 
     @Inject(method = "refreshOverlay", at = @At("HEAD"))
@@ -91,5 +163,11 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
                         info.getLoc()))
                 .forEach(pair -> pair.getFirst()
                         .add(new Pair<>(pair.getSecond().getPos(), pair.getSecond().getFacing())));
+    }
+
+    @Unique
+    private void labs$properlyResetScrollbar() {
+        ((AccessibleInfoList) (Object) infos).labs$properlyResetScrollbar(scrollBar,
+                scale.getSize().invoke(height - 75));
     }
 }

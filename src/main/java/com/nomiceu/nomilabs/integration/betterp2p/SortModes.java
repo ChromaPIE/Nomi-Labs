@@ -49,7 +49,18 @@ public enum SortModes {
 
                 if (b.getFrequency() == selected.getFrequency()) return 1;
             }
-            if (a.getFrequency() != b.getFrequency()) return b.getFrequency() - a.getFrequency();
+            if (a.getFrequency() != b.getFrequency()) {
+                // Unbound first
+                if (a.getFrequency() == 0) return -1;
+                if (b.getFrequency() == 0) return 1;
+
+                // Errors next
+                if (a.getError()) return -1;
+                if (b.getError()) return 1;
+
+                // Else, sort by frequency
+                return b.getFrequency() - a.getFrequency();
+            }
 
             return compareTypeThenDist(a, b);
         };
