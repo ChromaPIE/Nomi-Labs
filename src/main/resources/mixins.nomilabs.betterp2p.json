@@ -8,18 +8,23 @@
     "BetterMemoryCardModesMixin",
     "CommonProxyMixin",
     "GridServerCacheMixin",
-    "InfoListMixin",
-    "ServerRenameP2PTunnelMixin"
+    "ServerLinkP2PHandlerMixin",
+    "ServerRenameP2PTunnelMixin",
+    "ServerTypeChangeHandlerMixin",
+    "ServerUnlinkP2PHandlerMixin"
   ],
   "client": [
     "ClientProxyMixin",
     "GuiAdvancedMemoryCardKtAccessor",
     "GuiAdvancedMemoryCardMixin",
+    "InfoListMixin",
     "InfoWrapperMixin",
     "ModeWidgetButtonMixin",
+    "RefreshWidgetButtonMixin",
     "RenderHandlerMixin",
     "WidgetP2PColumnMixin",
     "WidgetP2PDeviceMixin",
+    "WidgetScrollBarMixin",
     "WidgetTypeSelectorMixin"
   ],
   "server": []
