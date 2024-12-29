@@ -1,5 +1,10 @@
 package com.nomiceu.nomilabs.mixin.betterp2p;
 
+import static com.nomiceu.nomilabs.util.LabsTranslate.*;
+import static net.minecraft.util.text.TextFormatting.*;
+
+import java.util.List;
+
 import net.minecraft.client.gui.GuiScreen;
 
 import org.lwjgl.input.Keyboard;
@@ -11,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import com.google.common.collect.ImmutableList;
 import com.nomiceu.nomilabs.integration.betterp2p.*;
 import com.projecturanus.betterp2p.client.gui.GuiAdvancedMemoryCard;
 import com.projecturanus.betterp2p.client.gui.InfoList;
@@ -25,9 +32,10 @@ import com.projecturanus.betterp2p.item.BetterMemoryCardModes;
 import kotlin.Pair;
 
 /**
- * Allows accessing needed functions and fields, and initializes playerPos field in InfoList. Also fills up
- * LabsClientCache, cancels existing checks for invalid setups (moved to infoList, right before sorting),
- * calls proper resetting of scrollbar in custom places, and allows arrows to scroll.
+ * Allows accessing needed functions and fields, initializes playerPos field in InfoList, fills up
+ * LabsClientCache, cancels existing checks for invalid setups (moved to InfoList, right before sorting),
+ * calls proper resetting of scrollbar in custom places, allows for custom filtering hover text,
+ * and allow using arrow keys to scroll.
  */
 @Mixin(value = GuiAdvancedMemoryCard.class, remap = false)
 public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements AccessibleGuiAdvancedMemoryCard {
@@ -108,21 +116,58 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
         return labs$getAccessibleInfo().labs$getSortMode();
     }
 
+    @Override
+    @Unique
+    public void labs$swapSortReversed() {
+        labs$getAccessibleInfo().labs$setSortReversed(!labs$getSortReversed());
+        infos.resort();
+        infos.refilter();
+        refreshOverlay();
+    }
+
+    @Override
+    @Unique
+    public boolean labs$getSortReversed() {
+        return labs$getAccessibleInfo().labs$getSortReversed();
+    }
+
+    @Inject(method = "getSortRules", at = @At("HEAD"), cancellable = true)
+    private void getCustomSortRules(CallbackInfoReturnable<List<String>> cir) {
+        cir.setReturnValue(ImmutableList.of(
+                format(translate("nomilabs.gui.advanced_memory_card.filter.title"), BOLD, UNDERLINE),
+                "<name>§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.name"),
+                "§9@in§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.input"),
+                "§6@out§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.output"),
+                "§a@b§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.bound"),
+                "§c@u§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.unbound"),
+                "§b@distless=<distance>§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.distless"),
+                "§d@distmore=<distance>§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.distmore"),
+                "§e@type=<type1>;<type2>;...§7 - " + translate("nomilabs.gui.advanced_memory_card.filter.type"),
+                "",
+                translateFormat("nomilabs.gui.advanced_memory_card.filter.end", GRAY)));
+    }
+
     @Inject(method = "initGui", at = @At("HEAD"), remap = true)
     private void setup(CallbackInfo ci) {
         labs$getAccessibleInfo().labs$setPlayerPos(mc.player.getPositionVector());
         labs$getAccessibleInfo().labs$setSortMode(LabsClientCache.sortMode);
+        labs$getAccessibleInfo().labs$setSortReversed(LabsClientCache.sortReversed);
     }
 
     @Inject(method = "initGui", at = @At("TAIL"), remap = true)
     private void handleEndInit(CallbackInfo ci) {
         labs$properlyResetScrollbar();
-        // Refresh button position: 1 button below normal
-        refreshButton.setPosition(guiLeft - 32, guiTop + 130);
 
-        // Add sort change button
-        buttonList.add(new SortWidgetButton((GuiAdvancedMemoryCard) (Object) this,
+        // Refresh button position: below all
+        refreshButton.setPosition(guiLeft - 32, guiTop + 162);
+
+        // Add sort change button, above type button
+        buttonList.add(new SortModeWidgetButton((GuiAdvancedMemoryCard) (Object) this,
                 guiLeft - 32, guiTop + 98, 32, 32));
+
+        // Add sort direction button, below type button
+        buttonList.add(new SortDirectionWidgetButton((GuiAdvancedMemoryCard) (Object) this,
+                guiLeft - 32, guiTop + 130, 32, 32));
     }
 
     @Redirect(method = "initGui",
@@ -186,7 +231,13 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
         LabsClientCache.outputLoc.clear();
 
         var selected = getSelectedInfo();
-        if (selected == null) return;
+        if (selected == null || selected.getFrequency() == 0) return;
+
+        LabsClientCache.selectedIsOutput = getSelectedInfo().getOutput();
+
+        // Reset time
+        LabsClientCache.lastSelectedRenderChange = System.currentTimeMillis();
+        LabsClientCache.renderingSelected = true;
 
         infos.getSorted().stream()
                 .filter(info -> info.getFrequency() == selected.getFrequency())
@@ -201,7 +252,8 @@ public abstract class GuiAdvancedMemoryCardMixin extends GuiScreen implements Ac
 
     @Inject(method = "onGuiClosed", at = @At("HEAD"))
     private void save(CallbackInfo ci) {
-        LabsClientCache.sortMode = labs$getAccessibleInfo().labs$getSortMode();
+        LabsClientCache.sortMode = labs$getSortMode();
+        LabsClientCache.sortReversed = labs$getSortReversed();
     }
 
     @Unique

@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.nomiceu.nomilabs.integration.betterp2p.AccessibleInfoList;
 import com.nomiceu.nomilabs.integration.betterp2p.AccessibleInfoWrapper;
 import com.nomiceu.nomilabs.integration.betterp2p.SortModes;
+import com.projecturanus.betterp2p.client.gui.Filter;
 import com.projecturanus.betterp2p.client.gui.InfoFilter;
 import com.projecturanus.betterp2p.client.gui.InfoList;
 import com.projecturanus.betterp2p.client.gui.InfoWrapper;
@@ -55,6 +56,9 @@ public abstract class InfoListMixin implements AccessibleInfoList {
     private SortModes labs$sortMode = SortModes.DEFAULT;
 
     @Unique
+    private boolean labs$sortReversed = false;
+
+    @Unique
     @Override
     public void labs$setSortMode(SortModes mode) {
         this.labs$sortMode = mode;
@@ -76,6 +80,18 @@ public abstract class InfoListMixin implements AccessibleInfoList {
         else newModeOrdinal = newModeOrdinal % maxSize;
 
         labs$sortMode = SortModes.values()[newModeOrdinal];
+    }
+
+    @Unique
+    @Override
+    public boolean labs$getSortReversed() {
+        return labs$sortReversed;
+    }
+
+    @Unique
+    @Override
+    public void labs$setSortReversed(boolean reversed) {
+        this.labs$sortReversed = reversed;
     }
 
     @Unique
@@ -192,7 +208,10 @@ public abstract class InfoListMixin implements AccessibleInfoList {
 
     @Inject(method = "resort", at = @At("HEAD"), cancellable = true)
     private void customSortLogic(CallbackInfo ci) {
-        labs$getThis().getSorted().sort(labs$sortMode.getComp(getSelectedInfo()));
+        var sorter = labs$sortMode.getComp(getSelectedInfo());
+        if (labs$sortReversed) sorter = sorter.reversed();
+
+        labs$getThis().getSorted().sort(sorter);
         ci.cancel();
     }
 
@@ -209,16 +228,26 @@ public abstract class InfoListMixin implements AccessibleInfoList {
             return;
         }
 
+        var sorter = labs$sortMode.getComp(getSelectedInfo());
+        if (labs$sortReversed) sorter = sorter.reversed();
+
         filter.updateFilter(toSearch.toLowerCase());
         labs$getThis().setFiltered(labs$getThis().getSorted().stream()
                 .filter(info -> {
                     if (getSelectedInfo() != null && info.getLoc().equals(getSelectedInfo().getLoc())) return true;
 
                     for (var entry : filter.getActiveFilters().entrySet()) {
+                        // Special Case: Bound
+                        // Check for Errors as well as Unbound
+                        if (entry.getKey() == Filter.BOUND) {
+                            return info.getFrequency() != 0 && !info.getError();
+                        }
+
+                        // Normal Filter
                         if (!entry.getKey().getFilter().invoke(info, entry.getValue())) return false;
                     }
                     return true;
-                }).sorted(SortModes.DEFAULT.getComp(getSelectedInfo()))
+                }).sorted(sorter)
                 .collect(Collectors.toList()));
     }
 
