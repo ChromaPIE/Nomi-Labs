@@ -30,10 +30,10 @@ public class LabsFluidNameElement implements IElement {
     }
 
     public LabsFluidNameElement(ByteBuf byteBuf) {
-        this.fluidName = NetworkTools.readStringUTF8(byteBuf);
+        this.fluidName = NetworkTools.readStringCompact(byteBuf);
         this.amount = byteBuf.readInt();
         if (byteBuf.readBoolean())
-            this.lang = NetworkTools.readStringUTF8(byteBuf);
+            this.lang = NetworkTools.readStringCompact(byteBuf);
         else
             this.lang = null;
         this.translatedName = LabsTOPUtils.translateFluid(
@@ -52,11 +52,11 @@ public class LabsFluidNameElement implements IElement {
 
     @Override
     public void toBytes(ByteBuf byteBuf) {
-        NetworkTools.writeStringUTF8(byteBuf, fluidName);
+        NetworkTools.writeStringCompact(byteBuf, fluidName);
         byteBuf.writeInt(amount);
         byteBuf.writeBoolean(lang != null);
         if (lang != null)
-            NetworkTools.writeStringUTF8(byteBuf, lang);
+            NetworkTools.writeStringCompact(byteBuf, lang);
     }
 
     @Override

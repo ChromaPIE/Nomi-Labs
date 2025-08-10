@@ -97,12 +97,12 @@ public class LabsTankGaugeElement implements IElement {
     }
 
     public LabsTankGaugeElement(ByteBuf byteBuf) {
-        fluidName = NetworkTools.readStringUTF8(byteBuf);
+        fluidName = NetworkTools.readStringCompact(byteBuf);
         amount = byteBuf.readInt();
 
         capacity = byteBuf.readInt();
 
-        tankName = NetworkTools.readStringUTF8(byteBuf);
+        tankName = NetworkTools.readStringCompact(byteBuf);
         expandedView = byteBuf.readBoolean();
 
         locked = byteBuf.readBoolean();
@@ -121,12 +121,12 @@ public class LabsTankGaugeElement implements IElement {
     @Override
     public void toBytes(ByteBuf byteBuf) {
         // Use auto handling of null strings
-        NetworkTools.writeStringUTF8(byteBuf, fluidName);
+        NetworkTools.writeStringCompact(byteBuf, fluidName);
         byteBuf.writeInt(amount);
 
         byteBuf.writeInt(capacity);
 
-        NetworkTools.writeStringUTF8(byteBuf, tankName);
+        NetworkTools.writeStringCompact(byteBuf, tankName);
         byteBuf.writeBoolean(expandedView);
 
         byteBuf.writeBoolean(locked);

@@ -36,7 +36,7 @@ public class CustomNameElement implements IElement {
             pickStack = ItemStack.EMPTY;
         }
 
-        customName = NetworkTools.readStringUTF8(buf);
+        customName = NetworkTools.readStringCompact(buf);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class CustomNameElement implements IElement {
             buf.writeBoolean(false);
         }
 
-        NetworkTools.writeStringUTF8(buf, customName);
+        NetworkTools.writeStringCompact(buf, customName);
     }
 
     @Override

@@ -44,7 +44,7 @@ public class LabsFluidOutputElement implements IElement {
     }
 
     public LabsFluidOutputElement(@NotNull ByteBuf buf) {
-        fluidName = NetworkTools.readStringUTF8(buf);
+        fluidName = NetworkTools.readStringCompact(buf);
         color = buf.readInt();
         amount = buf.readInt();
         expanded = buf.readBoolean();
@@ -101,7 +101,7 @@ public class LabsFluidOutputElement implements IElement {
 
     @Override
     public void toBytes(@NotNull ByteBuf buf) {
-        NetworkTools.writeStringUTF8(buf, fluidName);
+        NetworkTools.writeStringCompact(buf, fluidName);
         buf.writeInt(color);
         buf.writeInt(amount);
         buf.writeBoolean(expanded);
