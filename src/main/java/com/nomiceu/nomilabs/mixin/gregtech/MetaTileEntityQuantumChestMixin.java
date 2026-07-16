@@ -25,7 +25,7 @@ import com.llamalad7.mixinextras.injector.ModifyReceiver;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.nomiceu.nomilabs.NomiLabs;
-import com.nomiceu.nomilabs.gregtech.mixinhelper.LockableQuantumChest;
+import com.nomiceu.nomilabs.gregtech.mixinhelper.AccessibleQuantumChest;
 
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.gui.GuiTextures;
@@ -34,6 +34,8 @@ import gregtech.api.gui.ModularUI;
 import gregtech.api.gui.widgets.ToggleButtonWidget;
 import gregtech.api.items.itemhandlers.GTItemStackHandler;
 import gregtech.api.metatileentity.MetaTileEntity;
+import gregtech.api.util.GTTransferUtils;
+import gregtech.api.util.GTUtility;
 import gregtech.common.metatileentities.storage.MetaTileEntityQuantumChest;
 
 /**
@@ -43,19 +45,13 @@ import gregtech.common.metatileentities.storage.MetaTileEntityQuantumChest;
  * Also, checks locked stack when inserting directly into export items.
  */
 @Mixin(value = MetaTileEntityQuantumChest.class, remap = false)
-public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity implements LockableQuantumChest {
+public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity implements AccessibleQuantumChest {
 
     @Unique
     private static final String LABS$LOCKED_KEY = "IsLocked";
 
     @Unique
     private static final String LABS$LOCKED_STACK_KEY = "LockedStack";
-
-    @Shadow
-    protected long itemsStoredInside;
-
-    @Shadow
-    protected ItemStack virtualItemStack;
 
     @Shadow
     protected static boolean areItemStackIdentical(ItemStack first, ItemStack second) {
@@ -65,6 +61,27 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
     @Shadow
     @Final
     private static String NBT_ITEMSTACK;
+
+    @Shadow
+    protected boolean voiding;
+
+    @Shadow
+    @Final
+    protected long maxStoredItems;
+
+    @Shadow
+    protected ItemStack virtualItemStack;
+
+    @Shadow
+    @Final
+    private static String NBT_ITEMCOUNT;
+
+    @Shadow
+    protected long itemsStoredInside;
+
+    @Shadow
+    @Final
+    private static String IS_VOIDING;
 
     @Unique
     private boolean labs$locked = false;
@@ -135,7 +152,7 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
     private ModularUI.Builder addLockingButton(ModularUI.Builder instance, IUIHolder holder, EntityPlayer player) {
         return instance.widget(
                 new ToggleButtonWidget(25, 64, 18, 18,
-                        GuiTextures.BUTTON_LOCK, this::labs$isLocked, this::labs$setLocked)
+                        GuiTextures.BUTTON_LOCK, this::labs$isLockedInternal, this::labs$setLocked)
                                 .setTooltipText("nomilabs.gui.item_lock.tooltip")
                                 .shouldUseBaseBackground());
     }
@@ -170,21 +187,27 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
 
     @Inject(method = "receiveInitialSyncData", at = @At("RETURN"))
     private void readLockedInitial(PacketBuffer buf, CallbackInfo ci) {
-        labs$locked = buf.readBoolean();
+        try {
+            NBTTagCompound export = buf.readCompoundTag();
+            if (export != null)
+                GTUtility.readItems(exportItems, "ExportInventory", export);
 
-        if (labs$locked) {
-            try {
+            labs$locked = buf.readBoolean();
+            if (labs$locked) {
                 labs$lockedStack = buf.readItemStack();
-            } catch (IOException e) {
-                NomiLabs.LOGGER.warn(
-                        "[QuantumChestMixin] Failed to load locked stack from tile at {} from buffer in initial sync!",
-                        getPos());
             }
+        } catch (IOException e) {
+            NomiLabs.LOGGER.error(
+                    "[QuantumChestMixin] Failed to load info from tile at {} from buffer in initial sync!", getPos());
         }
     }
 
     @Inject(method = "writeInitialSyncData", at = @At("RETURN"))
     private void writeLockedInitial(PacketBuffer buf, CallbackInfo ci) {
+        var exportCompound = new NBTTagCompound();
+        GTUtility.writeItems(exportItems, "ExportInventory", exportCompound);
+        buf.writeCompoundTag(exportCompound);
+
         buf.writeBoolean(labs$locked);
 
         if (labs$locked) {
@@ -194,21 +217,55 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
 
     @Inject(method = "initFromItemStackData", at = @At("RETURN"))
     private void readLockedStack(NBTTagCompound data, CallbackInfo ci) {
-        labs$locked = data.getBoolean(LABS$LOCKED_KEY); // Defaults to false
-
-        if (labs$locked) {
+        if (data.hasKey(LABS$LOCKED_STACK_KEY, Constants.NBT.TAG_COMPOUND)) {
+            labs$locked = true;
             labs$lockedStack = new ItemStack(data.getCompoundTag(LABS$LOCKED_STACK_KEY));
         }
+
+        // Move into export items
+        if (!virtualItemStack.isEmpty()) {
+            ItemStack outputStack = exportItems.getStackInSlot(0);
+            int maxStackSize = virtualItemStack.getMaxStackSize();
+            if (outputStack.isEmpty() || (areItemStackIdentical(virtualItemStack, outputStack) &&
+                    outputStack.getCount() < maxStackSize)) {
+                GTTransferUtils.moveInventoryItems(itemInventory, exportItems);
+
+                markDirty();
+            }
+        }
+
+        writeCustomData(GregtechDataCodes.UPDATE_ALL, buf -> {
+            buf.writeItemStack(exportItems.getStackInSlot(0));
+            buf.writeItemStack(virtualItemStack);
+            buf.writeLong(itemsStoredInside);
+            buf.writeBoolean(labs$locked);
+            buf.writeItemStack(labs$lockedStack);
+        });
     }
 
-    @Inject(method = "writeItemStackData", at = @At("RETURN"))
-    private void writeLockedStack(NBTTagCompound data, CallbackInfo ci) {
-        data.setBoolean(LABS$LOCKED_KEY, labs$locked);
+    @Inject(method = "writeItemStackData", at = @At("HEAD"), cancellable = true)
+    private void betterWrite(NBTTagCompound data, CallbackInfo ci) {
+        ci.cancel();
+        super.writeItemStackData(data);
 
-        if (labs$locked) {
+        ItemStack stack = getExportItems().getStackInSlot(0);
+        if (!stack.isEmpty()) {
+            data.setTag(NBT_ITEMSTACK, stack.writeToNBT(new NBTTagCompound()));
+            data.setLong(NBT_ITEMCOUNT, itemsStoredInside + stack.getCount());
+        }
+
+        if (voiding) {
+            data.setBoolean(IS_VOIDING, true);
+        }
+
+        if (labs$isLocked()) {
             data.setTag(LABS$LOCKED_STACK_KEY, labs$lockedStack.serializeNBT());
         }
 
+        virtualItemStack = ItemStack.EMPTY;
+        itemsStoredInside = 0;
+        exportItems.setStackInSlot(0, ItemStack.EMPTY);
+        voiding = false;
         labs$locked = false;
         labs$lockedStack = ItemStack.EMPTY;
     }
@@ -217,12 +274,45 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
     private void receiveLockedUpdate(int dataId, PacketBuffer buf, CallbackInfo ci) {
         if (dataId == GregtechDataCodes.UPDATE_LOCKED_STATE) {
             labs$setLocked(buf.readBoolean());
+            scheduleRenderUpdate();
+            return;
+        }
+
+        if (dataId == GregtechDataCodes.UPDATE_CONTENTS_SEED) {
+            try {
+                virtualItemStack = buf.readItemStack();
+
+                scheduleRenderUpdate();
+            } catch (IOException e) {
+                NomiLabs.LOGGER.info(
+                        "[QuantumChestMixin] Failed to update locked item for chest at pos {} via custom data {}",
+                        getPos(), e);
+            }
+        }
+
+        if (dataId == GregtechDataCodes.UPDATE_ALL) {
+            try {
+                exportItems.setStackInSlot(0, buf.readItemStack());
+
+                virtualItemStack = buf.readItemStack();
+
+                itemsStoredInside = buf.readLong();
+                labs$locked = buf.readBoolean();
+
+                labs$lockedStack = buf.readItemStack();
+
+                scheduleRenderUpdate();
+            } catch (IOException e) {
+                NomiLabs.LOGGER.info(
+                        "[QuantumChestMixin] Failed to update data for chest for stack import at pos {} via custom data {}",
+                        getPos(), e);
+            }
         }
     }
 
     /* Helper */
     @Unique
-    private boolean labs$isLocked() {
+    private boolean labs$isLockedInternal() {
         return labs$locked;
     }
 
@@ -232,20 +322,12 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
 
         labs$locked = locked;
         if (!getWorld().isRemote) {
-            markDirty();
             writeCustomData(GregtechDataCodes.UPDATE_LOCKED_STATE, buf -> buf.writeBoolean(locked));
+            markDirty();
         }
 
         // Update locked stack
         if (locked) {
-            // Try virtual
-            if (itemsStoredInside > 0L && !virtualItemStack.isEmpty()) {
-                labs$lockedStack = virtualItemStack.copy();
-                labs$lockedStack.setCount(1);
-                return;
-            }
-
-            // Try export items
             ItemStack exportItems = getExportItems().getStackInSlot(0);
             if (!exportItems.isEmpty()) {
                 labs$lockedStack = exportItems.copy();
@@ -255,6 +337,29 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
         }
 
         labs$lockedStack = ItemStack.EMPTY;
+    }
+
+    @Unique
+    @Override
+    public boolean labs$isLocked() {
+        return labs$locked && !labs$lockedStack.isEmpty();
+    }
+
+    @Unique
+    @Override
+    public boolean labs$isLockedRendering() {
+        if (renderContextStack == null) return labs$isLocked();
+
+        var tag = renderContextStack.getTagCompound();
+        if (tag == null) return false;
+
+        return tag.hasKey(LABS$LOCKED_STACK_KEY, Constants.NBT.TAG_COMPOUND);
+    }
+
+    @Unique
+    @Override
+    public boolean labs$isVoiding() {
+        return voiding;
     }
 
     @Unique
@@ -272,5 +377,19 @@ public abstract class MetaTileEntityQuantumChestMixin extends MetaTileEntity imp
 
         labs$lockedStack = stack.copy();
         labs$lockedStack.setCount(1);
+        writeCustomData(GregtechDataCodes.UPDATE_CONTENTS_SEED,
+                buf -> buf.writeCompoundTag(labs$lockedStack.writeToNBT(new NBTTagCompound())));
+    }
+
+    @Unique
+    @Override
+    public ItemStack labs$getLockedStack() {
+        return labs$lockedStack;
+    }
+
+    @Unique
+    @Override
+    public long labs$getMaxStored() {
+        return maxStoredItems;
     }
 }

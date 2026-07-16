@@ -14,7 +14,6 @@ import net.minecraftforge.fml.common.Loader;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.nomiceu.nomilabs.LabsTextures;
 import com.nomiceu.nomilabs.LabsValues;
 import com.nomiceu.nomilabs.util.LabsTranslate;
 
@@ -38,8 +37,6 @@ public class LabsTankGaugeElement implements IElement {
     public static int BAR_NORMAL = 8;
     public static int BAR_EXPANDED = 12;
 
-    public static int LOCKED_ICON_BUFFER = 2;
-
     public static int DEFAULT_OUTLINE = 0xff969696;
     public static int DEFAULT_FILL = 0x44969696;
 
@@ -47,13 +44,15 @@ public class LabsTankGaugeElement implements IElement {
     private final String fluidName;
     private final String tankName;
 
-    private final int color;
+    // Color used when rendering fluid texture
+    private final int fluidColor;
+    // Color for tank gauge outline
+    private final int outlineColor;
 
     private final int amount;
     private final int capacity;
 
     private final boolean expandedView;
-    private final boolean locked;
 
     /* Cached Values */
     @Nullable
@@ -78,36 +77,35 @@ public class LabsTankGaugeElement implements IElement {
         FLUID_NAME_COLOR_MAP.put("lava", 0xffe6913c);
     }
 
-    public LabsTankGaugeElement(@Nullable FluidStack fluid, String tankName, int capacity,
-                                boolean expandedView, boolean locked) {
+    public LabsTankGaugeElement(@Nullable FluidStack fluid, String tankName, int capacity, boolean expandedView) {
         this.tankName = tankName;
         this.capacity = capacity;
         this.expandedView = expandedView;
-        this.locked = expandedView && locked; // Validation: We should only display locked icon in expanded
 
         if (capacity > 0 && fluid != null && !fluid.getFluid().getName().isEmpty()) {
             fluidName = fluid.getFluid().getName();
             amount = fluid.amount;
-            color = getColor(fluid);
+            fluidColor = fluid.getFluid().getColor();
+            outlineColor = getOutlineColor(fluid);
         } else {
-            fluidName = null;
+            fluidName = "";
             amount = 0;
-            color = DEFAULT_OUTLINE;
+            fluidColor = Color.WHITE.getRGB();
+            outlineColor = DEFAULT_OUTLINE;
         }
     }
 
     public LabsTankGaugeElement(ByteBuf byteBuf) {
-        fluidName = NetworkTools.readStringUTF8(byteBuf);
+        fluidName = NetworkTools.readString(byteBuf);
         amount = byteBuf.readInt();
 
         capacity = byteBuf.readInt();
 
-        tankName = NetworkTools.readStringUTF8(byteBuf);
+        tankName = NetworkTools.readString(byteBuf);
         expandedView = byteBuf.readBoolean();
 
-        locked = byteBuf.readBoolean();
-
-        color = byteBuf.readInt();
+        fluidColor = byteBuf.readInt();
+        outlineColor = byteBuf.readInt();
 
         if (hasFluid()) {
             fluid = LabsTOPUtils.getFluid(fluidName, "LabsTankGaugeElement");
@@ -120,18 +118,16 @@ public class LabsTankGaugeElement implements IElement {
 
     @Override
     public void toBytes(ByteBuf byteBuf) {
-        // Use auto handling of null strings
-        NetworkTools.writeStringUTF8(byteBuf, fluidName);
+        NetworkTools.writeString(byteBuf, fluidName);
         byteBuf.writeInt(amount);
 
         byteBuf.writeInt(capacity);
 
-        NetworkTools.writeStringUTF8(byteBuf, tankName);
+        NetworkTools.writeString(byteBuf, tankName);
         byteBuf.writeBoolean(expandedView);
 
-        byteBuf.writeBoolean(locked);
-
-        byteBuf.writeInt(color);
+        byteBuf.writeInt(fluidColor);
+        byteBuf.writeInt(outlineColor);
     }
 
     @Override
@@ -142,13 +138,7 @@ public class LabsTankGaugeElement implements IElement {
 
         // Box
         RenderHelper.drawThickBeveledBox(x, y, x + BAR_WIDTH, y + barHeight, 1,
-                color, color, DEFAULT_FILL);
-
-        // Locked Icon Rendering (Guaranteed expanded bar)
-        if (locked) {
-            GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
-            LabsTextures.TOP_LOCKED_ICON.draw(x + BAR_WIDTH + LOCKED_ICON_BUFFER, y, BAR_EXPANDED, BAR_EXPANDED);
-        }
+                outlineColor, outlineColor, DEFAULT_FILL);
 
         // Render fluid (Adaptation of RenderUtil#drawFluidForGui)
         if (hasFluid) {
@@ -158,7 +148,7 @@ public class LabsTankGaugeElement implements IElement {
         // Line Segments
         for (int i = 1; i < 10; i++) {
             RenderHelper.drawVerticalLine(x + i * 10, y + 1, y + (i == 5 ? barHeight - 1 : barHeight / 2),
-                    color);
+                    outlineColor);
         }
 
         if (expand) {
@@ -177,7 +167,7 @@ public class LabsTankGaugeElement implements IElement {
     }
 
     private int barWidth() {
-        return locked ? BAR_WIDTH + BAR_EXPANDED + LOCKED_ICON_BUFFER : BAR_WIDTH;
+        return BAR_WIDTH;
     }
 
     @Override
@@ -193,9 +183,9 @@ public class LabsTankGaugeElement implements IElement {
     /**
      * Adapted from {@link Colors#getHashFromFluid(FluidStack)}.
      */
-    private int getColor(FluidStack stack) {
+    private int getOutlineColor(FluidStack stack) {
         /*
-         * Fluid color: - If the fluid doesn't return white in getColor, use this value;
+         * Outline color: - If the fluid doesn't return white in getColor, use this value;
          * - if the fluid's name is stored in {@link Colors.FLUID_NAME_COLOR_MAP}, use that value;
          * - otherwise use default
          */
@@ -209,7 +199,11 @@ public class LabsTankGaugeElement implements IElement {
             else
                 colorMap = FLUID_NAME_COLOR_MAP;
 
-            return colorMap.getOrDefault(stack.getFluid().getName(), DEFAULT_OUTLINE);
+            int colorMapColor = colorMap.getOrDefault(stack.getFluid().getName(), DEFAULT_OUTLINE);
+
+            // Ensure alpha is 255 (GT returns an alpha of 0 due to bad impl, and in general we don't want a transparent
+            // outline)
+            return colorMapColor | 0xff000000;
         }
     }
 
@@ -243,7 +237,7 @@ public class LabsTankGaugeElement implements IElement {
     }
 
     private boolean hasFluid() {
-        return fluidName != null;
+        return fluidName != null && !fluidName.isEmpty();
     }
 
     private void renderFluidTexture(int x, int y, int barHeight) {
@@ -252,7 +246,7 @@ public class LabsTankGaugeElement implements IElement {
         GlStateManager.enableBlend();
         Minecraft.getMinecraft().renderEngine.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 
-        RenderUtil.setGlColorFromInt(color, 0xFF);
+        RenderUtil.setGlColorFromInt(fluidColor, 0xFF);
 
         int scaledAmount = (int) ((long) amount * (BAR_WIDTH - 2) / capacity);
 

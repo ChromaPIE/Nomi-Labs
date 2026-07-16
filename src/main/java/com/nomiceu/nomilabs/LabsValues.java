@@ -35,6 +35,7 @@ public class LabsValues {
     public static final String ENDER_IO_MODID = "enderio";
     public static final String AA_MODID = "actuallyadditions";
     public static final String JEI_MODID = "jei";
+    public static final String JEI_UTILS_MODID = "jeiutilities";
     public static final String ROCKETRY_MODID = "advancedrocketry";
     public static final String ARCHITECTURE_MODID = "architecturecraft";
     public static final String EFFORTLESS_MODID = "effortlessbuilding";
@@ -53,4 +54,6 @@ public class LabsValues {
     public static final String SOLAR_FLUX_MODID = "solarflux";
     public static final String ARMOR_PLUS_MODID = "armorplus";
     public static final String PA_EX_CRAFTING_MODID = "packagedexcrafting";
+    public static final String CT_MODID = "crafttweaker";
+    public static final String KEY_BINDING_PATCH_MODID = "key_binding_patch";
 }

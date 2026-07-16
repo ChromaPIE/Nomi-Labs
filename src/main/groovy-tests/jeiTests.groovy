@@ -6,6 +6,9 @@ import static com.nomiceu.nomilabs.groovy.GroovyHelpers.TranslationHelpers.*
 
 // JEI and Translation Helpers. (Goes in Post Init)
 
+// JEI hiding, recipe tooltips, descriptions, etc. can be marked as side only: client to save computation.
+// Remove and hide operations SHOULD NOT, as they also remove recipes!
+
 // There are two types of translations: translate and translatable.
 // Translate translates the input NOW, whilst translatable translates the input when it is needed.
 // All JEI Pages use Translatable, so that the language can be changed on-the-fly.
@@ -14,8 +17,8 @@ import static com.nomiceu.nomilabs.groovy.GroovyHelpers.TranslationHelpers.*
 // Use TranslateFormat to Translate with Parameters and a GT Format Code wrapped around the string!
 // (Note, normal format codes should be included in the lang itself, and thus are not available with `translateFormat`)
 // (Note, normal format codes are still available with `format`)
-println('Translated Hand Framing Tool Side: ' + translate('tooltip.nomilabs.hand_framing_tool.side', format('Hi', TextFormatting.AQUA)))
-println('Translated Hand Framing Tool Main: ' + translateFormat('tooltip.nomilabs.hand_framing_tool.not_set', TooltipHelper.RAINBOW))
+log.info('Translated Hand Framing Tool Side: ' + translate('tooltip.nomilabs.hand_framing_tool.side', format('Hi', TextFormatting.AQUA)))
+log.info('Translated Hand Framing Tool Main: ' + translateFormat('tooltip.nomilabs.hand_framing_tool.not_set', TooltipHelper.RAINBOW))
 
 // Translatable: Save something to be translated later
 var translatableObj = translatable('tooltip.nomilabs.excitationcoil.description')
@@ -33,21 +36,18 @@ translatableObj.append(translatable('tooltip.nomilabs.hand_framing_tool.front', 
 translatableObj.append(translatableLiteral('Hello World!'))
 
 // Call `toString` or `translate` to retrieve the translated and concatenated string
-println('Translatable Object: ' + translatableObj.translate())
+log.info('Translatable Object: ' + translatableObj.translate())
 
-/* JEI Pages. Each Method requires Translatable Objects. */
+/* Description Pages. */
 
-/* Description Pages. Each entry is seperated by double new lines. */
+// Replace a description page for a stack
+// Note that grs already handles addition and removal by itself;
+// but due to how it handles it, removing and then adding doesn't work correctly.
+// Keys are translated automatically (by JEI)
+// DO NOT CALL THIS METHOD MULTIPLE TIMES FOR THE SAME INGREDIENT!
 
-// Add a description page for a stack
-addDescription(item('minecraft:apple'), translatableLiteral('An Ordinary Apple... Not Poisoned.').addFormat(TextFormatting.DARK_GREEN), translatableLiteral('Eat it!'))
-
-// Add a translated description page for a stack
-addDescription(item('minecraft:iron_ingot'), translatable('tooltip.nomilabs.growth_chamber.description'), translatable('tooltip.nomilabs.dme_sim_chamber.description'))
-
-// Adding Catalyst Overrides (Bar on the Left, saying what can be used to do a recipe)
-// Example for Crafting Table:
-overrideRecipeCatalysts('minecraft.crafting', item('minecraft:crafting_table'), item('minecraft:apple'))
+// Example: Replacing GT's Programmed Circuit Description
+replaceDescription(metaitem('circuit.integrated'), 'tooltip.nomilabs.hand_framing_tool.front')
 
 /*
  * Recipe Output Tooltips. These are tooltips that appear on CRAFTING TABLE recipes, on a specific registry name.

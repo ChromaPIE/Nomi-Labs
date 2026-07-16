@@ -20,6 +20,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.registries.IForgeRegistry;
 
+import com.cleanroommc.groovyscript.event.GroovyReloadEvent;
 import com.cleanroommc.groovyscript.event.GsHandEvent;
 import com.cleanroommc.groovyscript.event.ScriptRunEvent;
 import com.nomiceu.nomilabs.LabsSounds;
@@ -42,14 +43,11 @@ import com.nomiceu.nomilabs.gregtech.prefix.LabsOrePrefix;
 import com.nomiceu.nomilabs.gregtech.recipe.LabsRecipeMaps;
 import com.nomiceu.nomilabs.gregtech.recipe.PerfectGemsCutterRecipes;
 import com.nomiceu.nomilabs.groovy.GroovyScriptHandManager;
-import com.nomiceu.nomilabs.groovy.GroovyTooltipChanger;
-import com.nomiceu.nomilabs.groovy.NBTClearingRecipe;
 import com.nomiceu.nomilabs.groovy.NCActiveCoolerHelper;
 import com.nomiceu.nomilabs.groovy.mixinhelper.CraftingOutputCache;
 import com.nomiceu.nomilabs.integration.ae2stuff.AE2StuffToolChanges;
 import com.nomiceu.nomilabs.integration.architecturecraft.LabsShapes;
 import com.nomiceu.nomilabs.integration.betterp2p.LabsBetterMemoryCardModes;
-import com.nomiceu.nomilabs.integration.jei.LabsJEIPlugin;
 import com.nomiceu.nomilabs.integration.nae2.AE2FCIntegration;
 import com.nomiceu.nomilabs.integration.top.LabsTOPManager;
 import com.nomiceu.nomilabs.item.ItemExcitationCoil;
@@ -246,11 +244,7 @@ public class CommonProxy {
     }
 
     @SubscribeEvent
-    public static void onScriptReload(ScriptRunEvent.Pre event) {
-        LabsJEIPlugin.onReload();
-        GroovyTooltipChanger.clear();
-        NBTClearingRecipe.NBT_CLEARERS.clear();
-
+    public static void onScriptReload(GroovyReloadEvent event) {
         if (Loader.isModLoaded(LabsValues.NUCLEARCRAFT_MODID)) {
             NCActiveCoolerHelper.onReload();
         }
@@ -266,11 +260,12 @@ public class CommonProxy {
                 LabsConfig.GroovyScriptSettings.CraftingOutputCacheMode.DISCARDED)
             CraftingOutputCache.cache = null;
 
-        // GrS reloads oredict caches depending on load state.
+        // GT reloads oredict caches depending on load state.
         // Labs always fits the state with GrS and JEI loaded (due to deps), meaning that oredict caches are refreshed
         // ONLY on JEI plugin register.
         // However, that event appears not to take place on dedicated servers, hence breaking oredicts there.
-        // Reload caches on GrS script load ONLY ON dedicated servers.
+        // Hence, reloads caches on GrS script load, ONLY ON dedicated servers.
+        // See: https://github.com/GregTechCEu/GregTech/pull/2771
         if (LabsSide.isDedicatedServer()) {
             NomiLabs.LOGGER.info("Fixing GT Ore Dict Caches... (DEDICATED SERVER ONLY)");
             // noinspection UnstableApiUsage

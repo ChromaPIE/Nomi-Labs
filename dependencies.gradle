@@ -59,9 +59,9 @@ dependencies {
     implementation rfg.deobf("curse.maven:packmode-278398:2567799") // Version 1.2.0
 
     // GroovyScript (from Cleanroom Maven)
-    implementation ("com.cleanroommc:groovyscript:1.1.3") {
+    implementation ("com.cleanroommc:groovyscript:1.3.3") {
         transitive = false
-    } // Version 1.1.3
+    } // Version 1.3.3
 
     // Config Anytime (from Cleanroom Maven)
     implementation ('com.cleanroommc:configanytime:3.0') {
@@ -69,9 +69,9 @@ dependencies {
     } // Version 3.0
 
     // Had Enough Items
-    implementation ('mezz:jei:4.28.0') {
+    implementation ('mezz:jei:4.29.15') {
         transitive = false
-    } // Version 4.28.0
+    } // Version 4.29.15
 
     // The One Probe
     implementation rfg.deobf('curse.maven:top-245211:2667280') // Version 1.4.28
@@ -91,13 +91,17 @@ dependencies {
     // Modular UI, needed sometimes for GT Runtime, and for other mods
     runtimeOnly "curse.maven:modularui-624243:5153413" // Version 2.4.3
 
-    /* -------------------------------- Util Runtime Only Deps -------------------------------- */
+    /* -------------------------------- Util Runtime Deps -------------------------------- */
 
     // JEI Utilities
-    runtimeOnly "curse.maven:jei-utilities-616190:4630499" // Version 0.2.12
+    // Register as implementation, as we have a mixin for this.
+    implementation rfg.deobf('curse.maven:jei-utilities-616190:6937116') // Version 0.2.13
 
     // Actually Advanced Info
     runtimeOnly "curse.maven:aainfo-573154:3627065" // Version 1.0.1
+
+    // Fix Narrator Crash (Mac)
+    runtimeOnly "com.cleanroommc:osxnarratorblocker:1.0"
 
     /* -------------------------------- Soft Deps, Compile Time Declaration -------------------------------- */
 
@@ -109,10 +113,10 @@ dependencies {
     compileOnly rfg.deobf("curse.maven:chameleon-230497:2450900") // Version 4.1.3
 
     // Ender IO, Used in Custom Capacitors (from CurseForge)
-    compileOnly rfg.deobf("curse.maven:ender-io-64578:4674244") // Version 5.3.72
+    compileOnly "curse.maven:ender-io-64578:4674244" // Version 5.3.72
 
     // Ender Core, Dep of Ender IO, also used in-code (from CurseForge)
-    compileOnly rfg.deobf("curse.maven:endercore-231868:4671384") // Version 0.5.78
+    compileOnly "curse.maven:endercore-231868:4671384" // Version 0.5.78
 
     // Chisel, used in Microverse Projectors (from CurseForge)
     compileOnly rfg.deobf("curse.maven:chisel-235279:2915375") // Version 1.0.2.45
@@ -128,7 +132,7 @@ dependencies {
 
     // AE2 Stuff Unofficial & BdLib Dep (from CurseForge)
     compileOnly rfg.deobf("curse.maven:bdlib-70496:4675629") // Version 1.14.4.1
-    compileOnly rfg.deobf("curse.maven:ae2-stuff-unofficial-951064:5002181") // Version 0.9
+    compileOnly rfg.deobf("curse.maven:ae2-stuff-unofficial-951064:6706171") // Version 0.10
 
     // AE2 Fluid Crafting Rework (from CurseForge)
     compileOnly rfg.deobf("curse.maven:ae2-fluid-crafting-rework-623955:5751930") // Version 2.6.6-r
@@ -368,6 +372,12 @@ dependencies {
         // The Dragon Lib, runtime dep (from CurseForge)
         runtimeOnly "curse.maven:the-dragon-lib-248055:2580332" // Version 5.3.0
         runtimeOnly "curse.maven:armor-plus-237366:2803109" // Version 11.25.1.62
+    }
+
+    // Key binding patch
+    // We have compat for this, but its all reflection, so only runtime declaration is needed
+    if (project.enable_kbp.toBoolean()) {
+        runtimeOnly "curse.maven:key-binding-patch-928895:5951684" // Version 1.3.3.2
     }
 
     // Only used because we have to manually copy GrS JEI reload code

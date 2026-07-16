@@ -27,7 +27,7 @@ public abstract class GuiFluidTerminalMixin extends AEBaseGui {
     /**
      * Default Ignored Constructor
      */
-    public GuiFluidTerminalMixin(Container container) {
+    private GuiFluidTerminalMixin(Container container) {
         super(container);
     }
 
@@ -37,8 +37,8 @@ public abstract class GuiFluidTerminalMixin extends AEBaseGui {
         Keyboard.enableRepeatEvents(true);
     }
 
-    @Inject(method = "onGuiClosed", at = @At("HEAD"), remap = true)
-    private void disableRepeat(CallbackInfo ci) {
+    @Override
+    public void onGuiClosed() {
         Keyboard.enableRepeatEvents(false);
     }
 }

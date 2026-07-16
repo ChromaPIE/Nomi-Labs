@@ -13,16 +13,21 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import com.cleanroommc.groovyscript.event.GroovyReloadEvent;
 import com.cleanroommc.groovyscript.event.ScriptRunEvent;
 import com.nomiceu.nomilabs.LabsTextures;
 import com.nomiceu.nomilabs.LabsValues;
 import com.nomiceu.nomilabs.NomiLabs;
 import com.nomiceu.nomilabs.fluid.registry.LabsFluids;
 import com.nomiceu.nomilabs.gregtech.block.registry.LabsMetaBlocks;
+import com.nomiceu.nomilabs.groovy.GroovyTooltipChanger;
+import com.nomiceu.nomilabs.groovy.NBTClearingRecipe;
+import com.nomiceu.nomilabs.groovy.OreByProductChangeStorage;
 import com.nomiceu.nomilabs.integration.betterp2p.LabsFilters;
 import com.nomiceu.nomilabs.integration.betterp2p.ModeDescriptionsHandler;
 import com.nomiceu.nomilabs.integration.betterquesting.LabsTierHelper;
 import com.nomiceu.nomilabs.integration.findme.FindMeKeybindRegister;
+import com.nomiceu.nomilabs.integration.jei.LabsJEIPlugin;
 import com.nomiceu.nomilabs.item.registry.LabsItems;
 import com.nomiceu.nomilabs.network.LabsNetworkHandler;
 import com.nomiceu.nomilabs.network.LabsP2PCycleMessage;
@@ -88,6 +93,14 @@ public class ClientProxy {
     public static void languageChanged(LabsResourcesRefreshedEvent event) {
         if (Loader.isModLoaded(LabsValues.BETTER_P2P_MODID))
             ModeDescriptionsHandler.refreshDescriptions();
+    }
+
+    @SubscribeEvent
+    public static void onScriptReload(GroovyReloadEvent event) {
+        LabsJEIPlugin.onReload();
+        OreByProductChangeStorage.clear();
+        GroovyTooltipChanger.clear();
+        NBTClearingRecipe.NBT_CLEARERS.clear();
     }
 
     @SubscribeEvent

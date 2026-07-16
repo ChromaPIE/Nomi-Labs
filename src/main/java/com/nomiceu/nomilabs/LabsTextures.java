@@ -17,8 +17,13 @@ public class LabsTextures {
     public static String P2P_CUSTOM_LOC = "textures/gui/advanced_memory_card/custom_modes.png";
     public static int P2P_CUSTOM_AMT = 2;
 
+    public static int TOP_SIZE = 12;
+    public static String TOP_LOC = "textures/gui/top/icons.png";
+    public static int TOP_AMT = 2;
+
     /* Overlays (Machine) */
     public static OrientedOverlayRenderer GROWTH_CHAMBER_OVERLAY;
+    public static SimpleOverlayRenderer LOCKED_STORAGE;
 
     /* Overlays (Casings) */
     public static SimpleOverlayRenderer MICROVERSE_CASING;
@@ -34,10 +39,11 @@ public class LabsTextures {
     public static TextureArea P2P_INPUT_ICON;
     public static TextureArea P2P_OUTPUT_ICON;
 
-    public static TextureArea TOP_LOCKED_ICON;
+    public static TextureArea[] TOP_ICONS;
 
     public static void preInit() {
         GROWTH_CHAMBER_OVERLAY = new OrientedOverlayRenderer("nomilabs:multiblock/growth_chamber");
+        LOCKED_STORAGE = new SimpleOverlayRenderer("nomilabs:overlay/overlay_storage_locked");
         MICROVERSE_CASING = new SimpleOverlayRenderer("nomilabs:microverse_casing");
         PROGRESS_BAR_ROCKET = labsFullImage("textures/gui/progress_bar/progress_bar_rocket.png");
 
@@ -47,7 +53,7 @@ public class LabsTextures {
         P2P_INPUT_ICON = labsFullImage("textures/gui/advanced_memory_card/input.png");
         P2P_OUTPUT_ICON = labsFullImage("textures/gui/advanced_memory_card/output.png");
 
-        TOP_LOCKED_ICON = labsFullImage("textures/gui/top/locked_icon.png");
+        TOP_ICONS = labsAreasImageHorizontal(TOP_LOC, TOP_SIZE, TOP_SIZE, TOP_AMT);
     }
 
     /**

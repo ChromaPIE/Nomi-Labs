@@ -6,11 +6,12 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "CraftingRecipeMixin",
-    "InfoParserOreDictMixin",
     "IngredientMixin",
     "JEIPluginMixin",
+    "PreprocessorMixin",
     "ShapedRecipeBuilderMixin",
-    "ShapelessRecipeBuilderMixin"
+    "ShapelessRecipeBuilderMixin",
+    "SReloadScriptsMixin"
   ],
   "client": [],
   "server": []

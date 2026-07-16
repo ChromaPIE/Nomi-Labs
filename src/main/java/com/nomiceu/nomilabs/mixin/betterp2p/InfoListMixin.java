@@ -1,8 +1,6 @@
 package com.nomiceu.nomilabs.mixin.betterp2p;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import javax.annotation.Nullable;
 
@@ -19,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.google.common.collect.ImmutableList;
 import com.nomiceu.nomilabs.integration.betterp2p.AccessibleInfoList;
 import com.nomiceu.nomilabs.integration.betterp2p.AccessibleInfoWrapper;
+import com.nomiceu.nomilabs.integration.betterp2p.LabsFilters;
 import com.nomiceu.nomilabs.integration.betterp2p.SortModes;
 import com.projecturanus.betterp2p.client.gui.Filter;
 import com.projecturanus.betterp2p.client.gui.InfoFilter;
@@ -26,6 +25,9 @@ import com.projecturanus.betterp2p.client.gui.InfoList;
 import com.projecturanus.betterp2p.client.gui.InfoWrapper;
 import com.projecturanus.betterp2p.client.gui.widget.WidgetScrollBar;
 import com.projecturanus.betterp2p.network.data.P2PLocation;
+
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
 /**
  * Handles updating infos' distance to player, and allows for custom sorting, including with error info.
@@ -212,10 +214,7 @@ public abstract class InfoListMixin implements AccessibleInfoList {
 
     @Inject(method = "resort", at = @At("HEAD"), cancellable = true)
     private void customSortLogic(CallbackInfo ci) {
-        var sorter = labs$sortMode.getComp(getSelectedInfo());
-        if (labs$sortReversed) sorter = sorter.reversed();
-
-        labs$getThis().getSorted().sort(sorter);
+        labs$sortMode.applySort(getSelectedInfo(), labs$getThis().getSorted(), labs$sortReversed);
         ci.cancel();
     }
 
@@ -232,27 +231,53 @@ public abstract class InfoListMixin implements AccessibleInfoList {
             return;
         }
 
-        var sorter = labs$sortMode.getComp(getSelectedInfo());
-        if (labs$sortReversed) sorter = sorter.reversed();
-
         filter.updateFilter(toSearch.toLowerCase());
-        labs$getThis().setFiltered(labs$getThis().getSorted().stream()
-                .filter(info -> {
-                    if (getSelectedInfo() != null && info.getLoc().equals(getSelectedInfo().getLoc())) return true;
+        List<InfoWrapper> filtered = new ObjectArrayList<>();
+        // For One Freq Filter
+        Set<Short> frequencies = new ShortOpenHashSet();
 
-                    for (var entry : filter.getActiveFilters().entrySet()) {
-                        // Special Case: Bound
-                        // Check for Errors as well as Unbound
-                        if (entry.getKey() == Filter.BOUND) {
-                            return info.getFrequency() != 0 && !info.getError();
-                        }
+        for (var info : labs$getThis().getSorted()) {
+            if (labs$passesFilters(info, frequencies))
+                filtered.add(info);
+        }
 
-                        // Normal Filter
-                        if (!entry.getKey().getFilter().invoke(info, entry.getValue())) return false;
+        labs$sortMode.applySort(getSelectedInfo(), filtered, labs$sortReversed);
+        labs$getThis().setFiltered(filtered);
+    }
+
+    @Unique
+    private boolean labs$passesFilters(InfoWrapper info, Set<Short> frequencies) {
+        // Always allow selected
+        if (getSelectedInfo() != null && info.getLoc().equals(getSelectedInfo().getLoc()))
+            return true;
+
+        for (var entry : filter.getActiveFilters().entrySet()) {
+            // Special Case: Bound
+            // Check for Errors as well as Unbound
+            if (entry.getKey() == Filter.BOUND) {
+                if (info.getFrequency() == 0 || info.getError())
+                    return false;
+            }
+
+            // Special Case: One Freq Filter
+            // NOTE: this unique frequency logic ignores the frequency of the selected
+            if (entry.getKey() == LabsFilters.ONE) {
+                // If unbound, ignore (passes)
+                if (info.getFrequency() != 0) {
+                    // If frequency in set, fails
+                    if (frequencies.contains(info.getFrequency())) {
+                        return false;
                     }
-                    return true;
-                }).sorted(sorter)
-                .collect(Collectors.toList()));
+
+                    frequencies.add(info.getFrequency());
+                }
+            }
+
+            // Normal Filter
+            if (!entry.getKey().getFilter().invoke(info, entry.getValue()))
+                return false;
+        }
+        return true;
     }
 
     @Unique

@@ -201,6 +201,17 @@ public class LabsConfig {
             DISCARDED,
             SAVED
         }
+
+        @Config.Comment({
+                "Whether to improve interactions of the Chemical Reactor and Large Chemical Reactor recipe map.",
+                "First: Syncs removals FROM the chemical reactor recipe map to the large chemical reactor recipe map.",
+                "This fixes issues where when removing a chem reactor recipe, it is only removed from the chemical reactor recipe map, creating syncing issues and potential conflicts in the Large Chemical Reactor map.",
+                "Second: Constrains searches of recipes in the large chemical reactor recipe map to large chemical reactor specific recipes ONLY.",
+                "This only affects recipe removals/searches by CraftTweaker or GroovyScript.",
+                "[default: true]" })
+        @Config.LangKey("config.nomilabs.groovy.scripting_chem_reactor_improvements")
+        @Config.RequiresMcRestart
+        public boolean scriptingChemReactorImprovements = true;
     }
 
     public static class TheOneProbeSettings {
@@ -279,7 +290,7 @@ public class LabsConfig {
         public boolean enableAdvancedRocketryIntegration = false;
 
         @Config.Comment({
-                "Whether to enable ArchitectureCraft Integration, which adds new slope variants, improves the GUI of the Sawbench, fixes the Sawbench Particle Texture, and fixes Shapes' Harvest Tools and Levels in The One Probe.",
+                "Whether to enable ArchitectureCraft Integration, which adds new slope variants, improves the GUI of the Sawbench, fixes the Sawbench Particle Texture, and fixes Shapes' Harvest Tools and Levels in The One Probe, when TOPAddons is installed.",
                 "[default: true]" })
         @Config.LangKey("config.nomilabs.mod_integration.architecture_craft")
         @Config.RequiresMcRestart
@@ -303,13 +314,6 @@ public class LabsConfig {
         @Config.LangKey("config.nomilabs.mod_integration.ftb_utils")
         @Config.RequiresMcRestart
         public boolean enableFTBUtilsIntegration = true;
-
-        @Config.Comment({
-                "Whether to enable TOP Addons Integration. Fixes Error Messages with ArchitectureCraft 3.108.",
-                "[default: true]" })
-        @Config.LangKey("config.nomilabs.mod_integration.top_addons")
-        @Config.RequiresMcRestart
-        public boolean enableTopAddonsIntegration = true;
 
         @Config.Comment({
                 "Whether to add a Empty Line between any Ingredient Tooltips in JEI.",
@@ -379,6 +383,19 @@ public class LabsConfig {
                 "[default: false]" })
         @Config.LangKey("config.nomilabs.mod_integration.pa_ex_crafting_strict_mode")
         public boolean paExCraftingStrictMode = false;
+
+        @Config.Comment({ "Whether to replace the expanded view of items in Storage Drawers.",
+                "A better version of the corresponding config in TOPAddons. That config should be turned off for this to work properly!",
+                "Also displays locked items, with count 0, in TOP, and skips item viewing for sealed drawers." })
+        @Config.LangKey("config.nomilabs.mod_integration.replace_drawers")
+        @Config.RequiresMcRestart
+        public boolean replaceDrawers = true;
+
+        @Config.Comment({
+                "Whether to disable changing AE2 P2P Tunnel types in-world by right clicking with relevant items (e.g. bucket for fluid)",
+                "This can be annoying and unhelpful; especially given Labs allows players to change types by shift-scrolling, and you may add other ways of transferring types (crafting / assembler recipes, advanced mem card, chisel)" })
+        @Config.LangKey("config.nomilabs.mod_integration.disable_ae2_p2p_world_change")
+        public boolean disableP2PInWorldChange = false;
 
         @Config.Comment("AE2 Terminal Options")
         @Config.LangKey("config.nomilabs.mod_integration.ae2_terminal")
@@ -471,6 +488,26 @@ public class LabsConfig {
                     "Default AE2 Behaviour is to Save.", "[default: false]" })
             @Config.LangKey("config.nomilabs.mod_integration.ae2_terminal.cfg_interface_save")
             public boolean saveConfigInterfaceSearch = false;
+
+            @Config.Comment({ "Prioritized items for AE2 / AE2FC, when inserting from JEI.",
+                    "Only gets prioritized if the item is present in storage, is patterned, or all other options are not stored nor patterned.",
+                    "Items are specified as <registryName>@<meta>, e.g. minecraft:dirt@1 (Coarse Dirt).",
+                    "Default list includes all Labs' universal circuits.",
+                    "[default: ]" })
+            @Config.LangKey("config.nomilabs.mod_integration.ae2_terminal.ae2_prio_items")
+            @Config.RequiresMcRestart
+            public String[] ae2PrioritizedItems = new String[] {
+                    "nomilabs:meta_item@2",
+                    "nomilabs:meta_item@3",
+                    "nomilabs:meta_item@4",
+                    "nomilabs:meta_item@5",
+                    "nomilabs:meta_item@6",
+                    "nomilabs:meta_item@7",
+                    "nomilabs:meta_item@8",
+                    "nomilabs:meta_item@9",
+                    "nomilabs:meta_item@10",
+                    "nomilabs:meta_item@11"
+            };
         }
 
         public static class EffortlessBuildingIntegration {
@@ -603,14 +640,6 @@ public class LabsConfig {
         @Config.RangeInt(min = 0)
         public int otherModsLinearXp = 0;
 
-        @Config.Comment({ "Whether to disable the Narrator.",
-                "Fixes crashes in Arm Macs, in some development environments.",
-                "This config does nothing outside of deobfuscated environments!",
-                "If your game is crashing, try enabling this!",
-                "[default: false]" })
-        @Config.LangKey("config.nomilabs.advanced.disable_narrator")
-        public boolean disableNarrator = false;
-
         @Config.Comment({ "Whether to enable Nomi-CEu data fixes.",
                 "This is used for Nomi-CEu, for players coming from before core-mod.",
                 "If this mod is being used in other scenarios, leave this at false, as this may break worlds!",
@@ -690,6 +719,16 @@ public class LabsConfig {
         @Config.LangKey("config.nomilabs.advanced.ignore_biomes")
         @Config.RequiresMcRestart
         public String[] ignoreBiomes = new String[0];
+
+        @Config.Comment({ "List of GroovyScript compat container MODIDs to disable.",
+                "Do not change unless you know what you are doing!",
+                "Suitable only when the compat is intended for an unsupportable version of a mod.",
+                "May not work (causing a crash) if used on containers not registered by GroovyScript.",
+                "Example: `advancedrocketry` to disable AdvancedRocketry compat.",
+                "[default: ]" })
+        @Config.LangKey("config.nomilabs.advanced.disable_grs_container")
+        @Config.RequiresMcRestart
+        public String[] disabledGrSContainers = new String[0];
 
         @Config.Comment({ "List of Fields to be client side only, acting as @SideOnly(Side.CLIENT).",
                 "DOES NOT WORK WITH CLASSES FROM MINECRAFT OR FORGE!",
@@ -782,15 +821,6 @@ public class LabsConfig {
         @Config.LangKey("config.nomilabs.advanced.binomial_threshold")
         @Config.RangeInt(min = 0)
         public int binomialThreshold = 20;
-
-        @Config.Comment({
-                "What the default mipmap levels should be. ONLY applies to those without an options.txt file; e,g. new instances.",
-                "Default vanilla mipmap level is 4.",
-                "[default: 4]"
-        })
-        @Config.LangKey("config.nomilabs.advanced.default_mipmap")
-        @Config.RangeInt(min = 0, max = 4)
-        public int defaultMipmap = 4;
 
         public static class WindowOverrides {
 

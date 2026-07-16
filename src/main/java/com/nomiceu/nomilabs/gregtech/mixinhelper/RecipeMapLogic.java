@@ -21,7 +21,7 @@ import gregtech.api.recipes.chance.output.impl.ChancedItemOutput;
 import gregtech.api.recipes.map.AbstractMapIngredient;
 import gregtech.api.recipes.map.MapFluidIngredient;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 public class RecipeMapLogic {
 
@@ -62,6 +62,7 @@ public class RecipeMapLogic {
         if (LabsConfig.groovyScriptSettings.gtRecipeSearchMode ==
                 LabsConfig.GroovyScriptSettings.GTRecipeSearchMode.LINEAR_SEARCH || outputBranchesCleared)
             return;
+
         var list = getOutputFromRecipe(recipe);
         recurseOutputTreeAdd(recipe, list, branch, 0, 0);
     }
@@ -78,7 +79,7 @@ public class RecipeMapLogic {
         EitherOrBoth<Set<Recipe>, OutputBranch> r = targetMap.compute(current, (k, v) -> {
             if (count == outputs.size() - 1) {
                 if (v == null) v = new EitherOrBoth<>();
-                v.setLeftIfNoValue(new ObjectOpenHashSet<>(1));
+                v.setLeftIfNoValue(new ObjectLinkedOpenHashSet<>(1));
                 // noinspection OptionalGetWithoutIsPresent
                 v.getLeft().get().add(recipe);
                 return v;

@@ -4,6 +4,7 @@ import static appeng.items.misc.ItemCrystalSeed.*;
 import static com.nomiceu.nomilabs.integration.jei.recipe.ChargerRecipeHandler.ChargerRecipe;
 import static com.nomiceu.nomilabs.integration.jei.recipe.CrystalGrowthRecipeHandler.*;
 import static com.nomiceu.nomilabs.util.LabsTranslate.Translatable;
+import static com.nomiceu.nomilabs.util.LabsTranslate.translate;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -19,29 +20,33 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
 import com.cleanroommc.groovyscript.api.GroovyBlacklist;
 import com.cleanroommc.groovyscript.api.GroovyLog;
+import com.cleanroommc.groovyscript.api.IIngredient;
+import com.cleanroommc.groovyscript.core.mixin.jei.IngredientInfoRecipeAccessor;
 import com.cleanroommc.groovyscript.registry.ReloadableRegistryManager;
 import com.google.common.collect.ImmutableList;
 import com.nomiceu.nomilabs.LabsValues;
 import com.nomiceu.nomilabs.groovy.PartialRecipe;
-import com.nomiceu.nomilabs.groovy.mixinhelper.LabsJEIApplied;
 import com.nomiceu.nomilabs.integration.jei.mixinhelper.AccessibleModRegistry;
 import com.nomiceu.nomilabs.integration.jei.recipe.ChargerCategory;
 import com.nomiceu.nomilabs.integration.jei.recipe.ChargerRecipeHandler;
 import com.nomiceu.nomilabs.integration.jei.recipe.CrystalGrowthCategory;
 import com.nomiceu.nomilabs.integration.jei.recipe.CrystalGrowthRecipeHandler;
 import com.nomiceu.nomilabs.item.registry.LabsItems;
-import com.nomiceu.nomilabs.util.ItemTagMeta;
+import com.nomiceu.nomilabs.util.LabsSide;
 
 import appeng.api.AEApi;
 import appeng.api.definitions.IDefinitions;
 import appeng.api.definitions.IMaterials;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import mezz.jei.api.IJeiRuntime;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.IModRegistry;
@@ -49,6 +54,8 @@ import mezz.jei.api.ingredients.IIngredientRegistry;
 import mezz.jei.api.ingredients.VanillaTypes;
 import mezz.jei.api.recipe.IRecipeCategoryRegistration;
 import mezz.jei.api.recipe.VanillaRecipeCategoryUid;
+import mezz.jei.plugins.jei.info.IngredientInfoRecipe;
+import mezz.jei.plugins.jei.info.IngredientInfoRecipeCategory;
 
 @mezz.jei.api.JEIPlugin
 @SuppressWarnings("unused")
@@ -57,8 +64,8 @@ public class LabsJEIPlugin implements IModPlugin {
 
     private static final ResourceLocation WILDCARD_LOCATION = new ResourceLocation("*", "*");
 
-    private static final Map<ItemTagMeta, List<Translatable>> DESCRIPTIONS = new HashMap<>();
-    private static final Map<ItemTagMeta, List<Translatable>> GROOVY_DESCRIPTIONS = new HashMap<>();
+    private static final List<Pair<IIngredient, String[]>> GROOVY_REPLACE_DESCRIPTIONS = new ObjectArrayList<>();
+    private static final List<Pair<IIngredient, List<IngredientInfoRecipe<ItemStack>>>> GROOVY_REGISTERED_DESCRIPTIONS = new ObjectArrayList<>();
 
     private static final Map<ResourceLocation, List<Translatable>> RECIPE_OUTPUT_TOOLTIPS = new Object2ObjectOpenHashMap<>();
     private static final Map<ResourceLocation, List<Translatable>> GROOVY_RECIPE_OUTPUT_TOOLTIPS = new Object2ObjectOpenHashMap<>();
@@ -69,9 +76,9 @@ public class LabsJEIPlugin implements IModPlugin {
     private static Map<ResourceLocation, List<Translatable>[]> COMPILED_RECIPE_INPUT_TOOLTIPS = null;
 
     private static final List<Pair<ItemStack, Function<NBTTagCompound, Boolean>>> IGNORE_NBT_HIDE = new ArrayList<>();
-    private static final Map<String, List<Object>> CATALYST_OVERRIDE = new Object2ObjectOpenHashMap<>();
 
     private static IIngredientRegistry itemRegistry;
+    private static IJeiRuntime runtime;
 
     @Override
     public void registerCategories(@NotNull IRecipeCategoryRegistration registry) {
@@ -101,14 +108,62 @@ public class LabsJEIPlugin implements IModPlugin {
         registry.handleRecipes(PartialRecipe.class, recipe -> new PartialRecipeWrapper(jeiHelpers, recipe),
                 VanillaRecipeCategoryUid.CRAFTING);
 
-        // Add Descriptions
-        Map<ItemTagMeta, List<Translatable>> tempMap = new HashMap<>(DESCRIPTIONS);
-        GROOVY_DESCRIPTIONS.forEach(((key, value) -> addDescription(tempMap, key, (list) -> list.addAll(value))));
-        tempMap.forEach(((itemTagMeta, strings) -> registry.addIngredientInfo(itemTagMeta.toStack(), VanillaTypes.ITEM,
-                strings.stream().map(Translatable::translate).collect(Collectors.joining("\n\n")))));
+        // Add Descriptions for Hand Framing
+        if (Loader.isModLoaded(LabsValues.STORAGE_DRAWERS_MODID)) {
+            registry.addIngredientInfo(new ItemStack(LabsItems.HAND_FRAMING_TOOL), VanillaTypes.ITEM,
+                    translate("item.nomilabs.hand_framing_tool.desc1") + "\n\n" +
+                            translate("item.nomilabs.hand_framing_tool.desc2") + "\n\n" +
+                            translate("item.nomilabs.hand_framing_tool.desc3") + "\n\n" +
+                            translate("item.nomilabs.hand_framing_tool.desc4") + "\n\n" +
+                            translate("item.nomilabs.hand_framing_tool.desc5") + "\n\n" +
+                            translate("item.nomilabs.hand_framing_tool.desc6"));
+        }
 
-        // GrS JEI Fix
-        LabsJEIApplied.afterRegisterApplied = false;
+        // Handle Groovy's Replace Descriptions
+        for (var pair : GROOVY_REPLACE_DESCRIPTIONS) {
+            var recipes = ((AccessibleModRegistry) registry).labs$registerDescriptionWithRecipesReturned(
+                    Arrays.asList(pair.getKey().getMatchingStacks()), VanillaTypes.ITEM, pair.getValue());
+            GROOVY_REGISTERED_DESCRIPTIONS.add(Pair.of(pair.getKey(), recipes));
+        }
+    }
+
+    @Override
+    public void onRuntimeAvailable(@NotNull IJeiRuntime runtime) {
+        // Remove Info Item from JEI
+        itemRegistry.removeIngredientsAtRuntime(VanillaTypes.ITEM,
+                Collections.singletonList(new ItemStack(LabsItems.INFO_ITEM)));
+
+        LabsJEIPlugin.runtime = runtime;
+    }
+
+    /**
+     * Called via JeiStarterMixin, after all mods have handled runtime.
+     */
+    public static void afterRuntimeAvailable() {
+        var category = (IngredientInfoRecipeCategory) runtime.getRecipeRegistry()
+                .getRecipeCategory(VanillaRecipeCategoryUid.INFORMATION);
+        if (category == null) return;
+
+        for (var pair : GROOVY_REGISTERED_DESCRIPTIONS) {
+            runtime.getRecipeRegistry().getRecipeWrappers(category).forEach(recipe -> {
+                // A GrS Mixin
+                IngredientInfoRecipeAccessor<?> accessor = (IngredientInfoRecipeAccessor<?>) recipe;
+
+                // Only hide items; others not supported
+                if (!VanillaTypes.ITEM.equals(accessor.getIngredientType())) return;
+
+                // Only hide those which match the ingredients we want
+                if (accessor.getIngredients().stream()
+                        .noneMatch(a -> a instanceof ItemStack itemStack && pair.getKey().test(itemStack)))
+                    return;
+
+                // Only hide those we did not add
+                if (pair.getValue().stream().anyMatch(a -> a == recipe))
+                    return;
+
+                runtime.getRecipeRegistry().hideRecipe(recipe, VanillaRecipeCategoryUid.INFORMATION);
+            });
+        }
     }
 
     public static void registerChargerRecipes(IModRegistry registry) {
@@ -144,7 +199,7 @@ public class LabsJEIPlugin implements IModPlugin {
         IMaterials materials = AEApi.instance().definitions().materials();
 
         Optional<ItemStack> fluix = materials.fluixCrystal().maybeStack(2);
-        Optional<ItemStack> certus = materials.certusQuartzCrystal().maybeStack(1);
+        Optional<ItemStack> certus = materials.certusQuartzCrystalCharged().maybeStack(1);
 
         if (fluix.isPresent() && certus.isPresent()) {
             recipes.add(createRecipe(ImmutableList.of(
@@ -184,24 +239,15 @@ public class LabsJEIPlugin implements IModPlugin {
         return stack;
     }
 
-    public static void afterModRegisters(IModRegistry registry) {
-        for (var override : CATALYST_OVERRIDE.entrySet()) {
-            ((AccessibleModRegistry) registry).labs$replaceRecipeCatalyst(override.getKey(), override.getValue());
-        }
-    }
-
-    @Override
-    public void onRuntimeAvailable(@NotNull IJeiRuntime jeiRuntime) {
-        // Remove Info Item from JEI
-        itemRegistry.removeIngredientsAtRuntime(VanillaTypes.ITEM,
-                Collections.singletonList(new ItemStack(LabsItems.INFO_ITEM)));
-
-        // GrS JEI Fix
-        LabsJEIApplied.afterRuntimeApplied = false;
+    /* Replace Desc Helper */
+    public static void replaceDescription(IIngredient ing, String... description) {
+        if (!LabsSide.isClient()) return;
+        GROOVY_REPLACE_DESCRIPTIONS.add(Pair.of(ing, description));
     }
 
     /* Hiding Helpers */
     public static void hideItemNBTMatch(ItemStack itemStack, Function<NBTTagCompound, Boolean> condition) {
+        if (!LabsSide.isClient()) return;
         IGNORE_NBT_HIDE.add(Pair.of(itemStack, condition));
     }
 
@@ -213,37 +259,24 @@ public class LabsJEIPlugin implements IModPlugin {
                 ReloadableRegistryManager.removeRegistryEntry(ForgeRegistries.RECIPES, recipe.getRegistryName());
         }
 
-        IGNORE_NBT_HIDE.add(Pair.of(itemStack, condition));
+        hideItemNBTMatch(itemStack, condition);
     }
 
     public static List<Pair<ItemStack, Function<NBTTagCompound, Boolean>>> getIgnoreNbtHide() {
         return ImmutableList.copyOf(IGNORE_NBT_HIDE);
     }
 
-    /* Descriptions */
-    public static void addDescription(@NotNull ItemStack stack, Translatable... description) {
-        addDescription(DESCRIPTIONS, new ItemTagMeta(stack), (list) -> Collections.addAll(list, description));
-    }
-
-    public static void addGroovyDescription(@NotNull ItemStack stack, Translatable... description) {
-        addDescription(GROOVY_DESCRIPTIONS, new ItemTagMeta(stack), (list) -> Collections.addAll(list, description));
-    }
-
-    private static void addDescription(Map<ItemTagMeta, List<Translatable>> map,
-                                       @NotNull ItemTagMeta stack, Consumer<List<Translatable>> addToList) {
-        map.computeIfAbsent(stack, (k) -> new ArrayList<>());
-        addToList.accept(map.get(stack));
-    }
-
     /* Recipe Output Tooltip */
     public static void addRecipeOutputTooltip(ResourceLocation recipeName,
                                               Translatable... tooltip) {
+        if (!LabsSide.isClient()) return;
         addRecipeOutputTooltip(RECIPE_OUTPUT_TOOLTIPS, recipeName,
                 (list) -> Collections.addAll(list, tooltip));
     }
 
     public static void addGroovyRecipeOutputTooltip(ResourceLocation recipeName,
                                                     Translatable... tooltip) {
+        if (!LabsSide.isClient()) return;
         addRecipeOutputTooltip(GROOVY_RECIPE_OUTPUT_TOOLTIPS, recipeName,
                 (list) -> Collections.addAll(list, tooltip));
     }
@@ -273,6 +306,7 @@ public class LabsJEIPlugin implements IModPlugin {
     /* Recipe Input Tooltip */
     public static void addRecipeInputTooltip(@NotNull ResourceLocation recipeName, int slotIndex,
                                              Translatable... tooltip) {
+        if (!LabsSide.isClient()) return;
         if (slotIndex < 0 || slotIndex > 8)
             throw new IllegalArgumentException("Add Recipe Input Tooltip: Slot Index must be between 0 and 8!");
 
@@ -282,6 +316,7 @@ public class LabsJEIPlugin implements IModPlugin {
 
     public static void addGroovyRecipeInputTooltip(@NotNull ResourceLocation recipeName, int slotIndex,
                                                    Translatable... tooltip) {
+        if (!LabsSide.isClient()) return;
         if (slotIndex < 0 || slotIndex > 8) {
             GroovyLog.get().error("Add Recipe Input Tooltip: Slot Index must be between 0 and 8!");
             return;
@@ -326,18 +361,13 @@ public class LabsJEIPlugin implements IModPlugin {
         return tooltips.stream().map(Translatable::translate).collect(Collectors.toList());
     }
 
-    public static void addRecipeCatalystOverride(String category, Object... catalyst) {
-        List<Object> result = new ArrayList<>();
-        Collections.addAll(result, catalyst);
-        CATALYST_OVERRIDE.put(category, result);
-    }
-
+    @SideOnly(Side.CLIENT)
     public static void onReload() {
-        GROOVY_DESCRIPTIONS.clear();
         GROOVY_RECIPE_OUTPUT_TOOLTIPS.clear();
         GROOVY_RECIPE_INPUT_TOOLTIPS.clear();
         IGNORE_NBT_HIDE.clear();
-        CATALYST_OVERRIDE.clear();
+        GROOVY_REPLACE_DESCRIPTIONS.clear();
+        GROOVY_REGISTERED_DESCRIPTIONS.clear();
         COMPILED_RECIPE_OUTPUT_TOOLTIPS = null;
         COMPILED_RECIPE_INPUT_TOOLTIPS = null;
     }

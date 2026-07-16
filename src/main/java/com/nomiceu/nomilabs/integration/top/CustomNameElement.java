@@ -27,6 +27,9 @@ public class CustomNameElement implements IElement {
     public CustomNameElement(ItemStack pickStack, String customName) {
         this.pickStack = pickStack;
         this.customName = customName;
+
+        // Clear any `Display/Name` tag in NBT
+        this.pickStack.clearCustomName();
     }
 
     public CustomNameElement(ByteBuf buf) {
@@ -45,14 +48,15 @@ public class CustomNameElement implements IElement {
         if (!pickStack.isEmpty())
             ElementTextRender.render(pickStack.getDisplayName(), x, y);
         if (shouldRender())
-            ElementTextRender.render(ITALIC + "(" + customName + ")" + RESET, x, y + TEXT_HEIGHT + SPACING);
+            ElementTextRender.render(getFormattedString(), x, y + TEXT_HEIGHT + SPACING);
     }
 
     @Override
     public int getWidth() {
         var pickStackWidth = pickStack.isEmpty() ? TEXT_HEIGHT : ElementTextRender.getWidth(pickStack.getDisplayName());
 
-        return shouldRender() ? Math.max(pickStackWidth, ElementTextRender.getWidth(customName)) : pickStackWidth;
+        return shouldRender() ? Math.max(pickStackWidth, ElementTextRender.getWidth(getFormattedString())) :
+                pickStackWidth;
     }
 
     @Override
@@ -75,6 +79,10 @@ public class CustomNameElement implements IElement {
     @Override
     public int getID() {
         return LabsTOPManager.CUSTOM_NAME_ELEMENT;
+    }
+
+    private String getFormattedString() {
+        return ITALIC + "(" + customName + ")" + RESET;
     }
 
     private boolean shouldRender() {

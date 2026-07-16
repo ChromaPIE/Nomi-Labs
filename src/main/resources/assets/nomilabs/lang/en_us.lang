@@ -55,6 +55,8 @@ config.nomilabs.mod_integration.dummy_muffler_hatches=Dummy Muffler Hatch Mode
 config.nomilabs.mod_integration.muffler_hatch_particles=Disable Muffler Hatch Particles
 config.nomilabs.mod_integration.prospector_dark=Default Prospector Dark Mode
 config.nomilabs.mod_integration.pa_ex_crafting_strict_mode=PackagedExCrafting Strict Mode (JEI)
+config.nomilabs.mod_integration.replace_drawers=Replace Drawer Item Display (TOP)
+config.nomilabs.mod_integration.disable_ae2_p2p_world_change=Disable AE2 P2P Tunnel In-World Type Changing
 
 config.nomilabs.mod_integration.effortlessbuilding=Effortless Building Integration Settings
 config.nomilabs.mod_integration.effortlessbuilding.enable=Enable Effortless Building Integration
@@ -75,6 +77,7 @@ config.nomilabs.mod_integration.ae2_terminal.interface=Interface Terminal Auto-F
 config.nomilabs.mod_integration.ae2_terminal.cfg_interface=Interface Configuration Terminal Auto-Focusing
 config.nomilabs.mod_integration.ae2_terminal.cfg_fluid_interface=Fluid Interface Configuration Terminal Auto-Focusing
 config.nomilabs.mod_integration.ae2_terminal.cfg_interface_save=Save Interface Configuration Terminal Searches
+config.nomilabs.mod_integration.ae2_terminal.ae2_prio_items=AE2 Prioritized Items
 
 config.nomilabs.mod_integration.better_p2p=Better P2P Options
 config.nomilabs.mod_integration.better_p2p.blink=Blink Selected P2P
@@ -91,6 +94,7 @@ config.nomilabs.groovy.tooltip=GroovyScript Extensions and Script Helper Setting
 config.nomilabs.groovy.hand=Enable GroovyScript Hand Command Additions
 config.nomilabs.groovy.recipe_search_mode=GregTech Recipe Output Search Mode
 config.nomilabs.groovy.crafting_output_cache=Crafting Output Cache Mode
+config.nomilabs.groovy.scripting_chem_reactor_improvements=Enable Scripting Chemical Reactor Improvements
 
 config.nomilabs.top=The One Probe Settings
 config.nomilabs.top.tooltip=The One Probe Settings
@@ -110,7 +114,6 @@ config.nomilabs.advanced.tooltip=Advanced Settings
 config.nomilabs.advanced.allow_other_modes=Allow Other Modes
 config.nomilabs.advanced.disable_xp_scaling=Disable Anvil XP Scaling
 config.nomilabs.advanced.other_mods_linear_xp=Misc Mod Linear XP Support
-config.nomilabs.advanced.disable_narrator=[DEV ONLY] Disable Narrator
 config.nomilabs.advanced.enable_nomi_ceu_data_fixes=Enable Nomi-CEu Specific Data Fixes
 config.nomilabs.advanced.ignore_items=ITEM Missing Registry Ignore List
 config.nomilabs.advanced.ignore_blocks=BLOCK Missing Registry Ignore List
@@ -128,7 +131,7 @@ config.nomilabs.advanced.server_side_methods=Server Side ONLY Methods
 config.nomilabs.advanced.server_welcome_name=Server Welcome Name
 config.nomilabs.advanced.mode_check_nomi_ceu=Mode Check Nomi-CEu Link
 config.nomilabs.advanced.binomial_threshold=Binomial Logic Threshold
-config.nomilabs.advanced.default_mipmap=Default Mipmap Level
+config.nomilabs.advanced.disable_grs_container=Disabled GrS Containers
 
 config.nomilabs.advanced.tiers=Quest Tier Detector Settings
 config.nomilabs.advanced.tiers.normal_qb_ids=Normal Mode Quest IDs
@@ -179,6 +182,13 @@ nomilabs.top.quantum_link_chamber.no_operation=§cMissing Operation Item§r
 nomilabs.top.quantum_link_chamber.wireless=§dProviding Infinite Wireless Range§r
 nomilabs.top.quantum_link_chamber.bad_connection=§cChamber Not Connected§r
 nomilabs.top.quantum_link_chamber.connected=Connected To: §b%s, %s, %s§r in Dimension §d%s§r
+
+nomilabs.top.storage_drawers.sealed=Sealed
+
+nomilabs.top.quantum_chest.cap=Item Capacity:
+
+nomilabs.top.properties.locked=§cLocked§r
+nomilabs.top.properties.voiding=§dVoiding Enabled§r
 
 nomilabs.gui.item_lock.tooltip.enabled=Item Locking Enabled
 nomilabs.gui.item_lock.tooltip.disabled=Item Locking Disabled
@@ -235,6 +245,7 @@ nomilabs.gui.advanced_memory_card.filter.input=Show Inputs Only
 nomilabs.gui.advanced_memory_card.filter.output=Show Outputs Only
 nomilabs.gui.advanced_memory_card.filter.bound=Show Bound and Valid Only
 nomilabs.gui.advanced_memory_card.filter.unbound=Show Unbound or Invalid Only
+nomilabs.gui.advanced_memory_card.filter.one=Show One P2P Per Network Only
 nomilabs.gui.advanced_memory_card.filter.distless=Set a Maximum Distance
 nomilabs.gui.advanced_memory_card.filter.distmore=Set a Minimum Distance
 nomilabs.gui.advanced_memory_card.filter.type=Filter by Type
@@ -270,16 +281,16 @@ nomilabs.gui.dummy_muffler=Muffler hatches no longer generate ashes to improve p
 fluid.uranium233=Uranium 233
 fluid.plutonium2=Plutonium
 
-fluid.moltenempoweredrestonia=Molten Empowered Restonia Crystal
-fluid.moltenempoweredpalis=Molten Empowered Palis Crystal
-fluid.moltenempoweredenori=Molten Empowered Enori Crystal
-fluid.moltenempowereddiamatine=Molten Empowered Diamatine Crystal
-fluid.moltenempoweredemeradic=Molten Empowered Emeradic Crystal
-fluid.moltenempoweredvoid=Molten Empowered Void Crystal
+fluid.moltenempoweredrestonia=Liquid Empowered Restonia Crystal
+fluid.moltenempoweredpalis=Liquid Empowered Palis Crystal
+fluid.moltenempoweredenori=Liquid Empowered Enori Crystal
+fluid.moltenempowereddiamatine=Liquid Empowered Diamatine Crystal
+fluid.moltenempoweredemeradic=Liquid Empowered Emeradic Crystal
+fluid.moltenempoweredvoid=Liquid Empowered Void Crystal
 
 fluid.elementalreduction=Elemental Reduction Fluid
 fluid.tough_alloy=Tough Alloy
-fluid.moltendarksoularium=Molten Dark Soularium
+fluid.moltendarksoularium=Liquid Dark Soularium
 
 # Data Fixers
 nomilabs.fixer.intro.1=This world must be remapped.
@@ -718,10 +729,13 @@ tooltip.nomilabs.general.crafting_component=§7Crafting Component Only.§r
 tooltip.nomilabs.item.can_clear=Place in Crafting Grid to §eClear Contents§r!
 tooltip.nomilabs.recipe.clearing=§cAll Contents Will be Voided!§r
 
+tooltip.nomilabs.items_stored_simple=§dItem Stored:§r %s, %,d items
+tooltip.nomilabs.creative_tank.configured=§dFluid Configured:§r %s
+
 # Meta Items
-tooltip.nomilabs.metaitem.universal_circuit.2=§7A universal circuit, representing any circuit of its tier.§r
-tooltip.nomilabs.metaitem.universal_circuit.3=§dUseful for AE2 patterning!§r
-tooltip.nomilabs.metaitem.universal_circuit.1=§b%s-Tier Circuit§r
+tooltip.nomilabs.metaitem.universal_circuit.1=§7A universal circuit, representing any circuit of its tier.§r
+tooltip.nomilabs.metaitem.universal_circuit.2=§dUseful for AE2 patterning!§r
+tooltip.nomilabs.metaitem.universal_circuit.3=§b%s-Tier Circuit§r
 
 # Items
 tooltip.nomilabs.drawers.item=§f- %s x%s§r
